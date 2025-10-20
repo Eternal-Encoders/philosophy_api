@@ -7,3 +7,8 @@ class MassageRequest(BaseModel):
 
 class GigaChatResponse(BaseModel):
     response: str
+
+class PhilosophyRequest(BaseModel):
+    context: list[str]
+    text: str
+    question: str

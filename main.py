@@ -1,7 +1,7 @@
 import os
 import requests
 from src import authorize
-from src.models import GigaChatResponse, MassageRequest
+from src.models import GigaChatResponse, MassageRequest, PhilosophyRequest
 from fastapi import FastAPI, HTTPException
 from dotenv import load_dotenv
 
@@ -54,4 +54,57 @@ def ask_gigachat(request: MassageRequest):
 
     data = response.json()
     answer = data['choices'][0]['message']['content']
+    return GigaChatResponse(response=answer)
+
+
+@app.post("/ask", response_model=GigaChatResponse)
+def ask_philosophy(request: PhilosophyRequest):
+
+    joined_context = "\n\n".join(request.context)
+
+    user_message = f"""
+<context>
+{joined_context}
+</context>
+
+<text>
+{request.text}
+</text>
+
+Вопрос пользователя: {request.question}
+
+Отвечай строго по материалу выше, не добавляй собственные рассуждения.
+"""
+
+    system_message = (
+        "Ты — эксперт по философии. Используй только предоставленный контекст и текст "
+        "для ответа. Не выходи за рамки источника."
+    )
+
+    payload = {
+        "model": "GigaChat",
+        "messages": [
+            {"role": "system", "content": system_message},
+            {"role": "user", "content": user_message}
+        ]
+    }
+
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+    }
+
+    response = requests.request(
+        "POST",
+        GIGACHAT_URL,
+        headers=headers,
+        json=payload,
+        verify=False
+    )
+
+    if response.status_code != 200:
+        raise HTTPException(status_code=response.status_code, detail=response.text)
+
+    data = response.json()
+    answer = data["choices"][0]["message"]["content"]
     return GigaChatResponse(response=answer)
