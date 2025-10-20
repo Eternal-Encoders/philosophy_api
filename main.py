@@ -32,7 +32,7 @@ def ask_gigachat(request: MassageRequest):
         'model': 'GigaChat',
         'messages': [
             {
-                'role': 'user', 
+                'role': 'user',
                 'content': request.prompt
             }
         ]
@@ -57,8 +57,13 @@ def ask_gigachat(request: MassageRequest):
     return GigaChatResponse(response=answer)
 
 
-@app.post("/ask", response_model=GigaChatResponse)
+@app.post("/ask2", response_model=GigaChatResponse)
 def ask_philosophy(request: PhilosophyRequest):
+    global token
+    if token is None:
+        assert SCOPE is not None
+        assert KEY is not None
+        token = authorize(SCOPE, KEY)
 
     joined_context = "\n\n".join(request.context)
 
@@ -76,10 +81,8 @@ def ask_philosophy(request: PhilosophyRequest):
 Отвечай строго по материалу выше, не добавляй собственные рассуждения.
 """
 
-    system_message = (
-        "Ты — эксперт по философии. Используй только предоставленный контекст и текст "
-        "для ответа. Не выходи за рамки источника."
-    )
+    system_message = "Ты — эксперт по философии. Используй только предоставленный контекст и текст " + "для ответа. Не выходи за рамки источника."
+
 
     payload = {
         "model": "GigaChat",
@@ -92,6 +95,7 @@ def ask_philosophy(request: PhilosophyRequest):
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
+        "Accept": "application/json"
     }
 
     response = requests.request(
@@ -103,6 +107,7 @@ def ask_philosophy(request: PhilosophyRequest):
     )
 
     if response.status_code != 200:
+        print(response.text)
         raise HTTPException(status_code=response.status_code, detail=response.text)
 
     data = response.json()
