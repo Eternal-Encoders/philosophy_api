@@ -8,7 +8,10 @@ class MassageRequest(BaseModel):
 class GigaChatResponse(BaseModel):
     response: str
 
-class PhilosophyRequest(BaseModel):
-    context: list[str]
+class TextChunk(BaseModel):
+    context: str
     text: str
+
+class PhilosophyRequest(BaseModel):
+    chunks: list[TextChunk]
     question: str

@@ -1,7 +1,7 @@
 import os
 import requests
 from src import authorize
-from src.models import GigaChatResponse, MassageRequest, PhilosophyRequest
+from src.models import GigaChatResponse, MassageRequest, PhilosophyRequest, TextChunk
 from fastapi import FastAPI, HTTPException
 from dotenv import load_dotenv
 
@@ -65,23 +65,31 @@ def ask_philosophy(request: PhilosophyRequest):
         assert KEY is not None
         token = authorize(SCOPE, KEY)
 
-    joined_context = "\n\n".join(request.context)
-
-    user_message = f"""
+    combined_chunks = ""
+    for i, chunk in enumerate(request.chunks, start=1):
+        combined_chunks += f"""
+<chunk {i}>
 <context>
-{joined_context}
+{chunk.context}
 </context>
 
 <text>
-{request.text}
+{chunk.text}
 </text>
+</chunk>
+"""
+
+    user_message = f"""
+        
+{combined_chunks}
 
 Вопрос пользователя: {request.question}
 
 Отвечай строго по материалу выше, не добавляй собственные рассуждения.
 """
 
-    system_message = "Ты — эксперт по философии. Используй только предоставленный контекст и текст " + "для ответа. Не выходи за рамки источника."
+    system_message = ("Ты — эксперт по философии. Используй только предоставленный контекст и текст " +
+                      "для ответа. Не выходи за рамки источника.")
 
 
     payload = {
