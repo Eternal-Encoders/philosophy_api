@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-
+from typing import List
 
 class MassageRequest(BaseModel):
     prompt: str
@@ -13,5 +13,14 @@ class TextChunk(BaseModel):
     text: str
 
 class PhilosophyRequest(BaseModel):
-    chunks: list[TextChunk]
+    chunks: List[TextChunk]
     question: str
+
+class EvaluateRequest(BaseModel):
+    chunks: List[TextChunk]
+    question: str
+    user_answer: str
+
+class EvaluateResponse(BaseModel):
+    score: int
+    comment: str

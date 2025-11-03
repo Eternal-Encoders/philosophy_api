@@ -1,7 +1,8 @@
 import os
+import json
 import requests
 from src import authorize
-from src.models import GigaChatResponse, MassageRequest, PhilosophyRequest, TextChunk
+from src.models import GigaChatResponse, MassageRequest, PhilosophyRequest, EvaluateResponse, EvaluateRequest
 from fastapi import FastAPI, HTTPException
 from dotenv import load_dotenv
 
@@ -121,3 +122,92 @@ def ask_philosophy(request: PhilosophyRequest):
     data = response.json()
     answer = data["choices"][0]["message"]["content"]
     return GigaChatResponse(response=answer)
+
+
+@app.post("/evaluate_answer", response_model=EvaluateResponse)
+def evaluate_answer(request: EvaluateRequest):
+    global token
+    if token is None:
+        assert SCOPE is not None
+        assert KEY is not None
+        token = authorize(SCOPE, KEY)
+
+    combined_chunks = ""
+    for i, chunk in enumerate(request.chunks, start=1):
+        combined_chunks += f"""
+<chunk {i}>
+<context>
+{chunk.context}
+</context>
+
+<text>
+{chunk.text}
+</text>
+</chunk>
+"""
+
+    user_message = f"""
+
+Ты — эксперт по философии и преподаватель.
+
+Ниже приведены материалы из учебника:
+{combined_chunks}
+
+Вопрос: {request.question}
+
+Ответ студента: {request.user_answer}
+
+Твоя задача:
+1. Оцени ответ по 10-балльной шкале (0 — полностью неверно, 10 — идеально точно).
+2. Дай краткий комментарий, в чём студент прав и где ошибся.
+
+Ответ возвращай строго в JSON формате:
+{{
+  "score": <целое число>,
+  "comment": "<короткое объяснение>"
+}}
+"""
+
+    system_message = (
+            "Ты оцениваешь ответы студентов по философии, строго на основе приведённых материалов. " +
+                      "Не выдумывай новых фактов, не добавляй собственные рассуждения."
+    )
+
+    payload = {
+        "model": "GigaChat",
+        "messages": [
+            {"role": "system", "content": system_message},
+            {"role": "user", "content": user_message}
+        ]
+    }
+
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+    }
+
+    response = requests.request(
+        "POST",
+        GIGACHAT_URL,
+        headers=headers,
+        json=payload,
+        verify=False
+    )
+
+    if response.status_code != 200:
+        print(response.text)
+        raise HTTPException(status_code=response.status_code, detail=response.text)
+
+    data = response.json()
+    answer = data["choices"][0]["message"]["content"]
+
+    try:
+        parsed = json.loads(answer)
+    except json.JSONDecodeError:
+        parsed = {"score": 0, "comment": f"Не удалось распарсить ответ: {answer}"}
+
+    if "score" not in parsed or "comment" not in parsed:
+        parsed = {"score": 0, "comment": f"Некорректный формат ответа: {answer}"}
+
+    return EvaluateResponse(**parsed)

@@ -3,21 +3,21 @@ from uuid import uuid4
 
 
 def authorize(scope: str, auth_key: str):
-	url = 'https://ngw.devices.sberbank.ru:9443/api/v2/oauth'
-	payload={
-		'scope': scope
-	}
-	headers = {
-		'Content-Type': 'application/x-www-form-urlencoded',
-		'Accept': 'application/json',
+    url = 'https://ngw.devices.sberbank.ru:9443/api/v2/oauth'
+    payload = {
+        'scope': scope
+    }
+    headers = {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Accept': 'application/json',
         'RqUID': str(uuid4()),
-		'Authorization': f'Basic {auth_key}'
-	}
-	response = requests.post(
+        'Authorization': f'Basic {auth_key}'
+    }
+    response = requests.post(
         url,
         headers=headers,
         data=payload,
         verify=False
     )
 
-	return response.json()['access_token']
+    return response.json()['access_token']
