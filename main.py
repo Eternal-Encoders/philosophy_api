@@ -1,5 +1,6 @@
 import os
 import json
+import uvicorn
 import requests
 from src import authorize
 from src.models import GigaChatResponse, MassageRequest, PhilosophyRequest, EvaluateResponse, EvaluateRequest
@@ -211,3 +212,12 @@ def evaluate_answer(request: EvaluateRequest):
         parsed = {"score": 0, "comment": f"Некорректный формат ответа: {answer}"}
 
     return EvaluateResponse(**parsed)
+
+
+if __name__ == '__main__':
+    uvicorn.run(
+        app,
+        host="0.0.0.0",
+        port=80,
+        workers=1
+    )
