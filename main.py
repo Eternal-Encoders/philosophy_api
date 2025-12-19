@@ -1,72 +1,83 @@
 import os
 import json
 import uvicorn
-import requests
-from src import authorize
-from src.models import GigaChatResponse, MassageRequest, PhilosophyRequest, EvaluateResponse, EvaluateRequest
+import httpx
+
 from fastapi import FastAPI, HTTPException
 from dotenv import load_dotenv
+from openai import OpenAI
+
+from src import authorize
+from src.models import (
+    GigaChatResponse,
+    MassageRequest,
+    PhilosophyRequest,
+    EvaluateResponse,
+    EvaluateRequest
+)
 
 load_dotenv()
 
-app = FastAPI(title='GigaChat Integration')
+KEY = os.getenv("AUTHORIZATION_KEY")
+SCOPE = os.getenv("SCOPE")
 
-KEY = os.getenv('AUTHORIZATION_KEY')
-SCOPE = os.getenv('SCOPE')
-GIGACHAT_URL = 'https://gigachat.devices.sberbank.ru/api/v1/chat/completions'
+if not KEY or not SCOPE:
+    raise RuntimeError("AUTHORIZATION_KEY or SCOPE not set")
 
-token = None
+app = FastAPI(title="GigaChat Integration (via OpenAI SDK)")
 
-@app.get('/')
-def root():
-    return {'message': 'running...'}
+token: str | None = None
+client: OpenAI | None = None
 
+def get_client() -> OpenAI:
+    global token, client
 
-@app.post('/ask', response_model=GigaChatResponse)
-def ask_gigachat(request: MassageRequest):
-    global token
     if token is None:
-        assert SCOPE is not None
-        assert KEY is not None
         token = authorize(SCOPE, KEY)
 
-    payload = {
-        'model': 'GigaChat',
-        'messages': [
-            {
-                'role': 'user',
-                'content': request.prompt
-            }
-        ]
-    }
-    headers = {
-        'Content-Type': 'application/json',
-        'Authorization': f'Bearer {token}'
-    }
-    response = requests.request(
-        'POST',
-        GIGACHAT_URL,
-        headers=headers,
-        json=payload,
-        verify=False
-    )
+    if client is None:
+        http_client = httpx.Client(
+            headers={
+                "Accept": "application/json",
+            },
+            verify=False
+        )
 
-    if response.status_code != 200:
-        raise HTTPException(status_code=response.status_code, detail=response.text)
+        client = OpenAI(
+            api_key=token,
+            base_url="https://gigachat.devices.sberbank.ru/api/v1",
+            http_client=http_client
+        )
 
-    data = response.json()
-    answer = data['choices'][0]['message']['content']
+    return client
+
+
+def call_gigachat(messages: list[dict]) -> str:
+    try:
+        response = get_client().chat.completions.create(
+            model="GigaChat",
+            messages=messages,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    return response.choices[0].message.content
+
+@app.get("/")
+def root():
+    return {"message": "running..."}
+
+@app.post("/ask", response_model=GigaChatResponse)
+def ask_gigachat(request: MassageRequest):
+    messages = [
+        {"role": "user", "content": request.prompt}
+    ]
+
+    answer = call_gigachat(messages)
     return GigaChatResponse(response=answer)
-
 
 @app.post("/ask2", response_model=GigaChatResponse)
 def ask_philosophy(request: PhilosophyRequest):
-    global token
-    if token is None:
-        assert SCOPE is not None
-        assert KEY is not None
-        token = authorize(SCOPE, KEY)
-
     combined_chunks = ""
     for i, chunk in enumerate(request.chunks, start=1):
         combined_chunks += f"""
@@ -82,7 +93,6 @@ def ask_philosophy(request: PhilosophyRequest):
 """
 
     user_message = f"""
-        
 {combined_chunks}
 
 Вопрос пользователя: {request.question}
@@ -90,49 +100,21 @@ def ask_philosophy(request: PhilosophyRequest):
 Отвечай строго по материалу выше, не добавляй собственные рассуждения.
 """
 
-    system_message = ("Ты — эксперт по философии. Используй только предоставленный контекст и текст " +
-                      "для ответа. Не выходи за рамки источника.")
-
-
-    payload = {
-        "model": "GigaChat",
-        "messages": [
-            {"role": "system", "content": system_message},
-            {"role": "user", "content": user_message}
-        ]
-    }
-
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json",
-        "Accept": "application/json"
-    }
-
-    response = requests.request(
-        "POST",
-        GIGACHAT_URL,
-        headers=headers,
-        json=payload,
-        verify=False
+    system_message = (
+        "Ты — эксперт по философии. Используй только предоставленный контекст и текст "
+        "для ответа. Не выходи за рамки источника."
     )
 
-    if response.status_code != 200:
-        print(response.text)
-        raise HTTPException(status_code=response.status_code, detail=response.text)
+    messages = [
+        {"role": "system", "content": system_message},
+        {"role": "user", "content": user_message},
+    ]
 
-    data = response.json()
-    answer = data["choices"][0]["message"]["content"]
+    answer = call_gigachat(messages)
     return GigaChatResponse(response=answer)
-
 
 @app.post("/evaluate_answer", response_model=EvaluateResponse)
 def evaluate_answer(request: EvaluateRequest):
-    global token
-    if token is None:
-        assert SCOPE is not None
-        assert KEY is not None
-        token = authorize(SCOPE, KEY)
-
     combined_chunks = ""
     for i, chunk in enumerate(request.chunks, start=1):
         combined_chunks += f"""
@@ -148,7 +130,6 @@ def evaluate_answer(request: EvaluateRequest):
 """
 
     user_message = f"""
-
 Ты — эксперт по философии и преподаватель.
 
 Ниже приведены материалы из учебника:
@@ -170,54 +151,37 @@ def evaluate_answer(request: EvaluateRequest):
 """
 
     system_message = (
-            "Ты оцениваешь ответы студентов по философии, строго на основе приведённых материалов. " +
-                      "Не выдумывай новых фактов, не добавляй собственные рассуждения."
+        "Ты оцениваешь ответы студентов по философии, строго на основе приведённых материалов. "
+        "Не выдумывай новых фактов, не добавляй собственные рассуждения."
     )
 
-    payload = {
-        "model": "GigaChat",
-        "messages": [
-            {"role": "system", "content": system_message},
-            {"role": "user", "content": user_message}
-        ]
-    }
+    messages = [
+        {"role": "system", "content": system_message},
+        {"role": "user", "content": user_message},
+    ]
 
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json",
-        "Accept": "application/json"
-    }
-
-    response = requests.request(
-        "POST",
-        GIGACHAT_URL,
-        headers=headers,
-        json=payload,
-        verify=False
-    )
-
-    if response.status_code != 200:
-        print(response.text)
-        raise HTTPException(status_code=response.status_code, detail=response.text)
-
-    data = response.json()
-    answer = data["choices"][0]["message"]["content"]
+    answer = call_gigachat(messages)
 
     try:
         parsed = json.loads(answer)
     except json.JSONDecodeError:
-        parsed = {"score": 0, "comment": f"Не удалось распарсить ответ: {answer}"}
+        parsed = {
+            "score": 0,
+            "comment": f"Не удалось распарсить ответ: {answer}"
+        }
 
     if "score" not in parsed or "comment" not in parsed:
-        parsed = {"score": 0, "comment": f"Некорректный формат ответа: {answer}"}
+        parsed = {
+            "score": 0,
+            "comment": f"Некорректный формат ответа: {answer}"
+        }
 
     return EvaluateResponse(**parsed)
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     uvicorn.run(
         app,
         host="0.0.0.0",
         port=80,
-        workers=1
+        workers=1,
     )
