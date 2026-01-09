@@ -24,7 +24,7 @@ class LevelEndingRepository(
     ):
         query = select(LevelEndingDB).where(
             LevelEndingDB.level_id == level_id,
-            LevelEndingDB.is_default is True
+            LevelEndingDB.is_default
         )
         result = await self.session.execute(query)
         return result.scalar_one_or_none()
