@@ -31,13 +31,13 @@ class LevelService:
             new_ending
         )
         if not ending_db:
-            raise HTTPException(status_code=404,
+            raise HTTPException(status_code=400,
                                 detail="Level ending was not created")
 
         if level_db:
             return SLevel.model_validate(level_db)
         else:
-            raise HTTPException(status_code=404,
+            raise HTTPException(status_code=400,
                                 detail="Level was not created")
 
     async def get_level_by_id(
