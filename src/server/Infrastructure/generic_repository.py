@@ -1,12 +1,12 @@
 import uuid
 from collections.abc import Callable
-from typing import TypeVar, Generic, Type, Optional
-from pydantic import BaseModel
-from sqlalchemy import select, func
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.ext.asyncio import AsyncSession
+from typing import Generic, TypeVar
 
 from Exceptions.handler import handle_fk
+from pydantic import BaseModel
+from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 T = TypeVar('T')
 CreateSchema = TypeVar('CreateSchema', bound=BaseModel)
@@ -14,11 +14,11 @@ UpdateSchema = TypeVar('UpdateSchema', bound=BaseModel)
 
 
 class GenericRepository(Generic[T, CreateSchema, UpdateSchema]):
-    def __init__(self, model: Type[T], session: AsyncSession):
+    def __init__(self, model: type[T], session: AsyncSession):
         self.model = model
         self.session = session
 
-    async def get_by_id(self, model_id: uuid.UUID) -> Optional[T]:
+    async def get_by_id(self, model_id: uuid.UUID) -> T | None:
         async with self.session as session:
             result = await session.execute(
                 select(self.model).where(model_id == self.model.id)
@@ -30,16 +30,15 @@ class GenericRepository(Generic[T, CreateSchema, UpdateSchema]):
             result = await session.execute(select(self.model))
             return result.scalars().all()
 
-    async def count(self, predicate: Optional[Callable] = None):
+    async def count(self, predicate: Callable | None = None):
         async with self.session as session:
             query = select(func.count()).select_from(self.model)
-            if predicate:
-                if callable(predicate):
-                    query = query.where(predicate)
+            if predicate and callable(predicate):
+                query = query.where(predicate)
             result = await session.execute(query)
             return result.scalar_one()
 
-    async def create(self, obj_in: CreateSchema) -> Optional[T]:
+    async def create(self, obj_in: CreateSchema) -> T | None:
         async with self.session as session:
             try:
                 obj_data = obj_in.model_dump()

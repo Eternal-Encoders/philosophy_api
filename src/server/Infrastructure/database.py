@@ -1,9 +1,6 @@
-from sqlalchemy import event
-from sqlalchemy.ext.asyncio import (async_sessionmaker,
-                                    create_async_engine,
-                                    AsyncSession)
 from Models.base import Base
-
+from sqlalchemy import event
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 engine = create_async_engine(
     'sqlite+aiosqlite:///test.db',

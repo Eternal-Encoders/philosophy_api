@@ -1,7 +1,8 @@
 import uuid
+
 from fastapi import Depends, HTTPException
 from Infrastructure.Repositories.card import CardRepository, get_card_rep
-from Schemas.card import SCardCreate, SCard
+from Schemas.card import SCard, SCardCreate
 
 
 class CardService:
@@ -97,6 +98,10 @@ class CardService:
 
 
 async def get_card_service(
-    card_rep: CardRepository = Depends(get_card_rep)
+    card_rep: CardRepository | None = None
 ):
+    if card_rep is None:
+        card_rep = Depends(get_card_rep)
+    assert card_rep is not None
+
     return CardService(card_rep)

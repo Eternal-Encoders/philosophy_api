@@ -1,0 +1,1 @@
+from .database import create_tables as create_tables

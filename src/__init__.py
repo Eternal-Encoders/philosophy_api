@@ -1,1 +1,1 @@
-from .autorization import authorize
+from .autorization import authorize as authorize

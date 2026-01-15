@@ -1,11 +1,13 @@
 import uuid
+
 from fastapi import Depends
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 from Infrastructure.database import get_session
 from Infrastructure.generic_repository import GenericRepository
-from Models import LevelEndingDB
 from Schemas.level_ending import SLevelEndingCreate, SLevelEndingUpdate
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from Models import LevelEndingDB
 
 
 class LevelEndingRepository(
@@ -31,6 +33,10 @@ class LevelEndingRepository(
 
 
 async def get_level_ending_rep(
-    session: AsyncSession = Depends(get_session)
+    session: AsyncSession | None = None
 ):
+    if session is None:
+        session = Depends(get_session)
+    assert session is not None
+
     return LevelEndingRepository(session)

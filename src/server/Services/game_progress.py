@@ -1,14 +1,21 @@
 import uuid
 
-from fastapi import HTTPException, Depends
-
+from fastapi import Depends, HTTPException
 from Infrastructure.Repositories.card import CardRepository, get_card_rep
-from Infrastructure.Repositories.game_progress import (GameProgressRepository,
-                                                       get_game_progress_rep)
-from Infrastructure.Repositories.level_ending import (LevelEndingRepository,
-                                                      get_level_ending_rep)
-from Schemas.game_progress import (SGameProgressCreate, SGameProgressCreateDto,
-                                   SGameProgress, SGameProgressUpdate)
+from Infrastructure.Repositories.game_progress import (
+    GameProgressRepository,
+    get_game_progress_rep,
+)
+from Infrastructure.Repositories.level_ending import (
+    LevelEndingRepository,
+    get_level_ending_rep,
+)
+from Schemas.game_progress import (
+    SGameProgress,
+    SGameProgressCreate,
+    SGameProgressCreateDto,
+    SGameProgressUpdate,
+)
 
 
 class GameProgressService:
@@ -129,10 +136,20 @@ class GameProgressService:
 
 
 async def get_game_progress_service(
-    game_prog_rep: GameProgressRepository = Depends(get_game_progress_rep),
-    card_rep: CardRepository = Depends(get_card_rep),
-    level_end_rep: LevelEndingRepository = Depends(get_level_ending_rep)
+    game_prog_rep: GameProgressRepository | None = None,
+    card_rep: CardRepository | None = None,
+    level_end_rep: LevelEndingRepository | None = None
 ):
+    if game_prog_rep is None:
+        game_prog_rep = Depends(get_game_progress_rep)
+    assert game_prog_rep is not None
+    if card_rep is None:
+        card_rep = Depends(get_card_rep)
+    assert card_rep is not None
+    if level_end_rep is None:
+        level_end_rep = Depends(get_level_ending_rep)
+    assert level_end_rep is not None
+
     return GameProgressService(game_prog_rep,
                                card_rep,
                                level_end_rep)

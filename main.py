@@ -1,25 +1,38 @@
-import os
 import json
+import os
 import uuid
 from contextlib import asynccontextmanager
-import uvicorn
+
 import requests
-from Infrastructure.database import create_tables
-from Schemas.card import SCard, SCardCreate
-from Schemas.game_progress import SGameProgress, SGameProgressCreateDto
-from Schemas.level import SLevel, SLevelCreate
-from Services.card import CardService, get_card_service
-from Services.game_progress import (GameProgressService,
-                                    get_game_progress_service)
-from Services.level import get_level_service, LevelService
-from src import authorize
-from src.models import (GigaChatResponse,
-                        MassageRequest,
-                        PhilosophyRequest,
-                        EvaluateResponse,
-                        EvaluateRequest)
-from fastapi import FastAPI, HTTPException, Depends
+import uvicorn
 from dotenv import load_dotenv
+from fastapi import Depends, FastAPI, HTTPException
+
+from src import authorize
+from src.models import (
+    EvaluateRequest,
+    EvaluateResponse,
+    GigaChatResponse,
+    MassageRequest,
+    PhilosophyRequest,
+)
+from src.server.Infrastructure import create_tables
+from src.server.Schemas import (
+    SCard,
+    SCardCreate,
+    SGameProgress,
+    SGameProgressCreateDto,
+    SLevel,
+    SLevelCreate,
+)
+from src.server.Services import (
+    CardService,
+    GameProgressService,
+    LevelService,
+    get_card_service,
+    get_game_progress_service,
+    get_level_service,
+)
 
 load_dotenv()
 
@@ -262,8 +275,12 @@ def evaluate_answer(request: EvaluateRequest):
           tags=['Card'])
 async def post_card(
     card_data: SCardCreate,
-    card_service: CardService = Depends(get_card_service)
+    card_service: CardService | None = None
 ):
+    if card_service is None:
+        card_service = Depends(get_card_service)
+    assert card_service is not None
+
     return await card_service.create_card(card_data)
 
 
@@ -272,8 +289,12 @@ async def post_card(
          tags=['Card'])
 async def get_card(
     card_id: uuid.UUID,
-    card_service: CardService = Depends(get_card_service)
+    card_service: CardService | None = None
 ):
+    if card_service is None:
+        card_service = Depends(get_card_service)
+    assert card_service is not None
+
     return await card_service.get_card_by_id(card_id)
 
 
@@ -281,8 +302,12 @@ async def get_card(
          response_model=list[SCard],
          tags=['Card'])
 async def get_all_cards(
-    card_service: CardService = Depends(get_card_service)
+    card_service: CardService | None = None
 ):
+    if card_service is None:
+        card_service = Depends(get_card_service)
+    assert card_service is not None
+
     return await card_service.get_all_cards()
 
 
@@ -290,8 +315,12 @@ async def get_all_cards(
             tags=['Card'])
 async def delete_card(
     card_id: uuid.UUID,
-    card_service: CardService = Depends(get_card_service)
+    card_service: CardService | None = None
 ):
+    if card_service is None:
+        card_service = Depends(get_card_service)
+    assert card_service is not None
+
     await card_service.delete_card(card_id)
 
 
@@ -300,8 +329,12 @@ async def delete_card(
           tags=['Level'])
 async def post_level(
     level_data: SLevelCreate,
-    level_service: LevelService = Depends(get_level_service)
+    level_service: LevelService | None = None
 ):
+    if level_service is None:
+        level_service = Depends(get_level_service)
+    assert level_service is not None
+
     return await level_service.create_level(level_data)
 
 
@@ -310,8 +343,12 @@ async def post_level(
          tags=['Level'])
 async def get_level(
     level_id: uuid.UUID,
-    level_service: LevelService = Depends(get_level_service)
+    level_service: LevelService | None = None
 ):
+    if level_service is None:
+        level_service = Depends(get_level_service)
+    assert level_service is not None
+
     return await level_service.get_level_by_id(level_id)
 
 
@@ -319,8 +356,12 @@ async def get_level(
          response_model=list[SLevel],
          tags=['Level'])
 async def get_all_levels(
-    level_service: LevelService = Depends(get_level_service)
+    level_service: LevelService | None = None
 ):
+    if level_service is None:
+        level_service = Depends(get_level_service)
+    assert level_service is not None
+
     return await level_service.get_all_levels()
 
 
@@ -328,8 +369,12 @@ async def get_all_levels(
             tags=['Level'])
 async def delete_level(
     level_id: uuid.UUID,
-    level_service: LevelService = Depends(get_level_service)
+    level_service: LevelService | None = None
 ):
+    if level_service is None:
+        level_service = Depends(get_level_service)
+    assert level_service is not None
+
     await level_service.delete_level(level_id)
 
 
@@ -338,8 +383,12 @@ async def delete_level(
           tags=['Game'])
 async def start_game(
     game_prog: SGameProgressCreateDto,
-    game_prog_service: GameProgressService = Depends(get_game_progress_service)
+    game_prog_service: GameProgressService | None = None
 ):
+    if game_prog_service is None:
+        game_prog_service = Depends(get_game_progress_service)
+    assert game_prog_service is not None
+
     return await game_prog_service.create_game_progress(game_prog)
 
 
@@ -348,8 +397,12 @@ async def start_game(
          tags=['Game'])
 async def get_game(
     game_prog_id: uuid.UUID,
-    game_prog_service: GameProgressService = Depends(get_game_progress_service)
+    game_prog_service: GameProgressService | None = None
 ):
+    if game_prog_service is None:
+        game_prog_service = Depends(get_game_progress_service)
+    assert game_prog_service is not None
+
     return await (game_prog_service
                   .get_game_progress_by_id(game_prog_id))
 
@@ -358,8 +411,12 @@ async def get_game(
          response_model=list[SGameProgress],
          tags=['Game'])
 async def get_all_games(
-    game_prog_service: GameProgressService = Depends(get_game_progress_service)
+    game_prog_service: GameProgressService | None = None
 ):
+    if game_prog_service is None:
+        game_prog_service = Depends(get_game_progress_service)
+    assert game_prog_service is not None
+
     return await game_prog_service.get_all_game_progresses()
 
 
@@ -367,8 +424,12 @@ async def get_all_games(
             tags=['Game'])
 async def delete_game(
     game_prog_id: uuid.UUID,
-    game_prog_service: GameProgressService = Depends(get_game_progress_service)
+    game_prog_service: GameProgressService | None = None
 ):
+    if game_prog_service is None:
+        game_prog_service = Depends(get_game_progress_service)
+    assert game_prog_service is not None
+
     await game_prog_service.delete_game_progress(game_prog_id)
 
 
@@ -377,8 +438,12 @@ async def delete_game(
 async def make_move(
     game_prog_id: uuid.UUID,
     choice: int,
-    game_prog_service: GameProgressService = Depends(get_game_progress_service)
+    game_prog_service: GameProgressService | None = None
 ):
+    if game_prog_service is None:
+        game_prog_service = Depends(get_game_progress_service)
+    assert game_prog_service is not None
+
     return await game_prog_service.make_move(game_prog_id, choice)
 
 

@@ -1,5 +1,6 @@
 import uuid
-from pydantic import Field, BaseModel, ConfigDict
+
+from pydantic import BaseModel, ConfigDict, Field
 from Schemas.level_ending import SLevelEnding
 
 

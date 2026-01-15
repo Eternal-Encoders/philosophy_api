@@ -1,9 +1,9 @@
 from fastapi import Depends
-from sqlalchemy.ext.asyncio import AsyncSession
 from Infrastructure.database import get_session
 from Infrastructure.generic_repository import GenericRepository
 from Models.level import LevelDB
 from Schemas.level import SLevelCreate, SLevelUpdate
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 class LevelRepository(GenericRepository[LevelDB, SLevelCreate, SLevelUpdate]):
@@ -12,6 +12,10 @@ class LevelRepository(GenericRepository[LevelDB, SLevelCreate, SLevelUpdate]):
 
 
 async def get_level_rep(
-    session: AsyncSession = Depends(get_session)
+    session: AsyncSession  | None = None
 ):
+    if session is None:
+        session = Depends(get_session)
+    assert session is not None
+
     return LevelRepository(session)

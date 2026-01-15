@@ -1,12 +1,12 @@
 import uuid
-from typing import List, Optional
+
 from fastapi import Depends
-from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession
 from Infrastructure.database import get_session
 from Infrastructure.generic_repository import GenericRepository
 from Models.card import CardDB
 from Schemas.card import SCardCreate, SCardUpdate
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 class CardRepository(GenericRepository[CardDB, SCardCreate, SCardUpdate]):
@@ -20,7 +20,7 @@ class CardRepository(GenericRepository[CardDB, SCardCreate, SCardUpdate]):
             result = await session.execute(query)
             return result.scalar_one()
 
-    async def get_numbers_by_level(self, level_id) -> List[int]:
+    async def get_numbers_by_level(self, level_id) -> list[int]:
         query = select(CardDB.number) \
             .where(CardDB.level_id == level_id) \
             .order_by(CardDB.number)
@@ -31,7 +31,7 @@ class CardRepository(GenericRepository[CardDB, SCardCreate, SCardUpdate]):
             self,
             level_id: uuid.UUID,
             number: int,
-    ) -> Optional[CardDB]:
+    ) -> CardDB | None:
         query = select(CardDB) \
             .where(CardDB.level_id == level_id,
                    CardDB.number == number)
@@ -60,6 +60,10 @@ class CardRepository(GenericRepository[CardDB, SCardCreate, SCardUpdate]):
 
 
 async def get_card_rep(
-    session: AsyncSession = Depends(get_session)
+    session: AsyncSession | None = None
 ):
+    if session is None:
+        session = Depends(get_session)
+    assert session is not None
+
     return CardRepository(session)

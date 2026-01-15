@@ -1,11 +1,11 @@
 import uuid
-from typing import Optional
+
 from fastapi import Depends
+from Infrastructure.database import get_session
+from Models.card import CardDB
+from Schemas.card import SCardCreate, SCardUpdate
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from Infrastructure.database import get_session
-from Schemas.card import SCardCreate, SCardUpdate
-from Models.card import CardDB
 
 
 class CardRepository:
@@ -20,7 +20,7 @@ class CardRepository:
         await self.session.refresh(new_card)
         return new_card.id
 
-    async def get_by_id(self, card_id: uuid.UUID) -> Optional[CardDB]:
+    async def get_by_id(self, card_id: uuid.UUID) -> CardDB | None:
         card = await self.session.execute(
             select(CardDB).where(CardDB.id == card_id)
         )
@@ -34,7 +34,7 @@ class CardRepository:
             self,
             card_update: SCardUpdate,
             card_id: uuid.UUID
-    ) -> Optional[CardDB]:
+    ) -> CardDB | None:
         card = await self.get_by_id(card_id)
         data = card_update.model_dump()
         if card:
@@ -56,6 +56,10 @@ class CardRepository:
 
 
 async def get_card_rep(
-    session: AsyncSession = Depends(get_session)
+    session: AsyncSession | None = None
 ):
+    if session is None:
+        session = Depends(get_session)
+    assert session is not None
+
     return CardRepository(session)

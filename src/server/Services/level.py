@@ -1,9 +1,12 @@
 import uuid
-from fastapi import HTTPException, Depends
+
+from fastapi import Depends, HTTPException
 from Infrastructure.Repositories.level import LevelRepository, get_level_rep
-from Infrastructure.Repositories.level_ending import (LevelEndingRepository,
-                                                      get_level_ending_rep)
-from Schemas.level import SLevelCreate, SLevel
+from Infrastructure.Repositories.level_ending import (
+    LevelEndingRepository,
+    get_level_ending_rep,
+)
+from Schemas.level import SLevel, SLevelCreate
 from Schemas.level_ending import SLevelEndingCreate
 
 
@@ -63,8 +66,15 @@ class LevelService:
 
 
 async def get_level_service(
-    level_rep: LevelRepository = Depends(get_level_rep),
-    level_ending_rep: LevelEndingRepository = Depends(get_level_ending_rep)
+    level_rep: LevelRepository | None = None,
+    level_ending_rep: LevelEndingRepository | None = None
 ):
+    if level_rep is None:
+        level_rep = Depends(get_level_rep)
+    assert level_rep is not None
+    if level_ending_rep is None:
+        level_ending_rep = Depends(get_level_ending_rep)
+    assert level_ending_rep is not None
+
     return LevelService(level_rep,
                         level_ending_rep)

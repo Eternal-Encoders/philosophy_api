@@ -1,5 +1,6 @@
-import requests
 from uuid import uuid4
+
+import requests
 
 
 def authorize(scope: str, auth_key: str):

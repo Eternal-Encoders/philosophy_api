@@ -1,9 +1,10 @@
 from fastapi import Depends
-from sqlalchemy.ext.asyncio import AsyncSession
 from Infrastructure.database import get_session
 from Infrastructure.generic_repository import GenericRepository
-from Models import GameProgressDB
 from Schemas.game_progress import SGameProgressCreate, SGameProgressUpdate
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from Models import GameProgressDB
 
 
 class GameProgressRepository(GenericRepository[
@@ -15,6 +16,10 @@ class GameProgressRepository(GenericRepository[
 
 
 async def get_game_progress_rep(
-    session: AsyncSession = Depends(get_session)
+    session: AsyncSession | None = None
 ):
+    if session is None:
+        session = Depends(get_session)
+    assert session is not None
+
     return GameProgressRepository(session)
