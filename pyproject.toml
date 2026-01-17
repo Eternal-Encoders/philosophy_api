@@ -7,11 +7,9 @@ requires-python = ">=3.12"
 dependencies = [
     "fastapi[standard]>=0.119.0",
     "nuitka>=2.8.9",
-    "psycopg2>=2.9.11",
     "python-dotenv>=1.1.1",
     "requests>=2.32.5",
     "ruff>=0.14.12",
-    "sqlalchemy>=2.0.45",
 ]
 
 [tool.ruff.lint]

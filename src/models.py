@@ -1,5 +1,5 @@
+
 from pydantic import BaseModel
-from typing import List, Optional
 
 
 class GigaChatResponse(BaseModel):
@@ -12,14 +12,14 @@ class TextChunk(BaseModel):
 
 
 class AskRequest(BaseModel):
-    prompt: Optional[str] = None           # для обычного ask
-    question: Optional[str] = None         # для философского режима
-    chunks: Optional[List[TextChunk]] = None   # для философского режима
+    prompt: str | None = None           # для обычного ask
+    question: str | None = None         # для философского режима
+    chunks: list[TextChunk] | None = None   # для философского режима
     philosophy_mode: bool = False          # флаг переключения
 
 
 class EvaluateRequest(BaseModel):
-    chunks: List[TextChunk]
+    chunks: list[TextChunk]
     question: str
     user_answer: str
 

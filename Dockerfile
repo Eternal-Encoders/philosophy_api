@@ -21,10 +21,10 @@ COPY main.py .
 ENTRYPOINT ["/bin/sh"]
 
 RUN uv run nuitka main.py \
-    --standalone \
     --onefile \
+    --clang \
     --output-dir=dist \
-    --lto=yes \
+    --follow-imports \
     --nofollow-import-to=pytest \
     --python-flag=nosite,-O \
     --plugin-enable=anti-bloat,implicit-imports,data-files,pylint-warnings
