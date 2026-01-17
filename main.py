@@ -13,8 +13,7 @@ from src.models import (
     EvaluateRequest,
     EvaluateResponse,
     GigaChatResponse,
-    MassageRequest,
-    PhilosophyRequest,
+    AskRequest,
 )
 from src.server.Infrastructure import create_tables
 from src.server.Schemas import (
@@ -60,56 +59,36 @@ def root():
 
 
 @app.post('/ask', response_model=GigaChatResponse)
-def ask_gigachat(request: MassageRequest):
+def ask(request: AskRequest):
     global token
     if token is None:
         assert SCOPE is not None
         assert KEY is not None
         token = authorize(SCOPE, KEY)
 
-    payload = {
-        'model': 'GigaChat',
-        'messages': [
-            {
-                'role': 'user',
-                'content': request.prompt
-            }
-        ]
-    }
-    headers = {
-        'Content-Type': 'application/json',
-        'Authorization': f'Bearer {token}'
-    }
-    response = requests.request(
-        'POST',
-        GIGACHAT_URL,
-        headers=headers,
-        json=payload,
-        verify=False
-    )
+    # ---------- РЕЖИМ 1: обычный ----------
+    if not request.philosophy_mode:
+        if not request.prompt:
+            raise HTTPException(400, "prompt is required when philosophy_mode=False")
 
-    if response.status_code != 200:
-        raise HTTPException(
-            status_code=response.status_code,
-            detail=response.text
-        )
+        payload = {
+            'model': 'GigaChat',
+            'messages': [
+                {'role': 'user', 'content': request.prompt}
+            ]
+        }
 
-    data = response.json()
-    answer = data['choices'][0]['message']['content']
-    return GigaChatResponse(response=answer)
+    # ---------- РЕЖИМ 2: философия ----------
+    else:
+        if not request.question or not request.chunks:
+            raise HTTPException(
+                400,
+                "question and chunks are required when philosophy_mode=True"
+            )
 
-
-@app.post("/ask2", response_model=GigaChatResponse)
-def ask_philosophy(request: PhilosophyRequest):
-    global token
-    if token is None:
-        assert SCOPE is not None
-        assert KEY is not None
-        token = authorize(SCOPE, KEY)
-
-    combined_chunks = ""
-    for i, chunk in enumerate(request.chunks, start=1):
-        combined_chunks += f"""
+        combined_chunks = ""
+        for i, chunk in enumerate(request.chunks, start=1):
+            combined_chunks += f"""
 <chunk {i}>
 <context>
 {chunk.context}
