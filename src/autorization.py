@@ -4,6 +4,9 @@ import requests
 
 
 def authorize(scope: str, auth_key: str):
+    auth_key = auth_key.strip('\"').strip('\'')
+    scope = scope.strip('\"').strip('\'')
+
     url = 'https://ngw.devices.sberbank.ru:9443/api/v2/oauth'
     payload = {
         'scope': scope
@@ -14,6 +17,7 @@ def authorize(scope: str, auth_key: str):
         'RqUID': str(uuid4()),
         'Authorization': f'Basic {auth_key}'
     }
+
     response = requests.post(
         url,
         headers=headers,
