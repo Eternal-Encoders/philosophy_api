@@ -114,16 +114,20 @@ def reduce_responce(
         assert key is not None
         token = authorize(scope, key)
 
-    headers = {
+    n_headers = {
         **headers,
         "Authorization": f"Bearer {token}"
     }
-    res = func(url=url, headers=headers, **payload)
+    res = func(url=url, headers=n_headers, **payload)
 
     if res.status_code == 401:
         assert scope is not None
         assert key is not None
         token = authorize(scope, key)
-        res = func(url=url, headers=headers, **payload)
+        n_headers = {
+            **headers,
+            "Authorization": f"Bearer {token}"
+        }
+        res = func(url=url, headers=n_headers, **payload)
     
-    return token, get_giga_content(res)
+    return token, get_giga_content(res)  # type: ignore
